@@ -10,16 +10,25 @@ module GithubTrello
 
       payload = JSON.parse(request.body.read)
 
-      board_id = config["board_ids"][payload["repository"]["name"]]
+      repository_name = payload["repository"]["name"]
+      board_id = config[repository_name]["board_id"]
+
       unless board_id
         puts "[ERROR] Commit from #{payload["repository"]["name"]} but no board_id entry found in config"
         return
       end
 
       branch = payload["ref"].gsub("refs/heads/", "")
-      if config["blacklist_branches"] and config["blacklist_branches"].include?(branch)
+      branch_config = config[repository_name]["branches"][branch]
+      branch_config = config[repository_name]["branches"]["default"] unless branch_config
+      unless branch_config
+        puts "No branch configuration for branch #{branch} in repository #{repository_name}"
         return
-      elsif config["whitelist_branches"] and !config["whitelist_branches"].include?(branch)
+      end
+
+      if config[repository_name]["blacklist_branches"] and config[repository_name]["blacklist_branches"].include?(branch)
+        return
+      elsif config[repository_name]["whitelist_branches"] and !config[repository_name]["whitelist_branches"].include?(branch)
         return
       end
 
@@ -45,10 +54,10 @@ module GithubTrello
 
         # Determine the action to take
         update_config = case match[2].downcase
-          when "case", "card" then config["on_start"]
-          when "close", "fix" then config["on_close"]
-          when "archive" then {:archive => true}
-        end
+                          when "case", "card" then branch_config["on_start"]
+                          when "close", "fix" then branch_config["on_close"]
+                          when "archive" then {:archive => true}
+                        end
 
         next unless update_config.is_a?(Hash)
 
@@ -61,7 +70,7 @@ module GithubTrello
           move_to = update_config["move_to"]
         end
 
-        unless results["idList"] == move_to
+        unless results["idList"] == move_to || move_to.nil?
           to_update[:idList] = move_to
         end
 

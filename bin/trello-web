@@ -15,25 +15,53 @@ Vegas::Runner.new(GithubTrello::Server, "trello-web", {
       puts "We've generated an example one for you, but you need to configure it still."
 
       config = <<YAML
-oauth_token: [token]
-api_key: [key]
-board_ids:
-  [repo name]: [board id]
-on_start:
-  move_to: [list id]
-  archive: true
-on_close:
-  move_to: [list id]
-  archive: true
-# Alternatively, you can specify move_to as a hash of repo name -> list id
-on_close/on_start:
-  move_to:
-    [repo name]: [list id]
+# items within [] are optional, and within {} are required
+oauth_token: {token}
+api_key: {key}
+{repository-name-1}:
+  board_id: {id_of_trello_board_1}
+  [whitelist_branches:
+    {branch-name-1}
+    {branch-name-2}]
+  [blacklist_branches:
+    {branch-name-3}
+    {branch-name-4}]
+  branches:
+    # if no branch configuration is given, only comments will be updated (no movement or closing of card will happen)
+    [{branch-name-1}:
+      # on_start is for case/card, on_close is for close/fix
+      on_start:
+        [move_to: {id_of_trello_list_1}] # if no move_to is given, no movement occurs
+        [archive: false] # true / false
+      on_close:
+        [move_to: {id_of_trello_list_2}]
+        [archive: true]]
+    [{branch-name-2}:
+      on_start:
+        [move_to: {id_of_trello_list_3}]
+        [archive: false]
+      on_close:
+        [move_to: {id_of_trello_list_4}]
+        [archive: true]]
+    [default:
+      # default branch is used for every branch not specified in this file
+      on_start:
+        [move_to: {id_of_trello_list_5}]
+        [archive: false]
+      on_close:
+        [move_to: {id_of_trello_list_6}]
+        [archive: true]]
+
+[{repository-name-2}:
+  board_id: {id_of_trello_board_2}
+  ...]
 
 # See README for deployment usage
 on_deploy:
   move_to:
-    [repo name]: [list id]
+    {repository-name-1}: {id_of_trello_list_7}
+    [{repository-name-2}: {id_of_trello_list_8}
+    ...]
   archive: true
 YAML
 
